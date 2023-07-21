@@ -5,7 +5,7 @@ import InputNumberAtom from "../atoms/InputNumberAtom";
 
 interface ISliderWithInputProps {
     value: number;
-    setValue: React.Dispatch<React.SetStateAction<number>>;
+    setValue: (value: number) => void;
 }
 
 export default function SliderWithInput({ value, setValue }: ISliderWithInputProps): JSX.Element {

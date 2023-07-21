@@ -17,12 +17,14 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 interface FileDropBoxProps {
     multiple?: boolean;
     onSend?: (files: File[]) => void;
+    onClear?: () => void;
     inputID: string
 }
 
 const FileDropBox: React.FC<FileDropBoxProps> = ({
     multiple = false,
     onSend,
+    onClear,
     inputID
 }) => {
     const [files, setFiles] = useState<File[]>([]);
@@ -34,10 +36,16 @@ const FileDropBox: React.FC<FileDropBoxProps> = ({
 
     const handleFileRemove = (index: number) => {
         setFiles(files.filter((_file, i) => i !== index));
+        if (files.length <= 1 && onClear) {
+            onClear();
+        }
     };
 
     const handleClear = () => {
         setFiles([]);
+        if (onClear) {
+            onClear();
+        }
     };
 
     const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
@@ -113,7 +121,7 @@ const FileDropBox: React.FC<FileDropBoxProps> = ({
                                 <List sx={{ flexDirection: "column", justifyContent: "space-between", display: "flex", width: "100%"}}>
                                     {files.map((file, index) => (
                                         <ListItem key={index} >
-                                            <ListItemText primary={file.name} />
+                                            <ListItemText primary={inputID === "mobile" && file.name.length > 10 ? `${file.name.slice(0, 10)}...` : file.name} />
                                             <ListItemSecondaryAction>
                                                 <IconButton edge="end" onClick={() => handleFileRemove(index)}>
                                                     <ClearIcon />

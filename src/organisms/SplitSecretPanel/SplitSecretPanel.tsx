@@ -17,6 +17,9 @@ import { styled } from "@mui/material/styles";
 import useCurrentWidth from "../../hooks/useCurrentWidth";
 import DropBox from "../../molecules/DropBox";
 import StepShardingConfiguration from "./StepShardingConfiguration";
+import {useSharderContext} from "../../hooks/context/SharderContext";
+import StepShardsDownload from "./StepShardsDownload";
+
 
 const ColoredConnector = styled(StepConnector)(({ theme }) => ({
     [`&.${stepConnectorClasses.active}`]: {
@@ -35,6 +38,7 @@ const ColoredConnector = styled(StepConnector)(({ theme }) => ({
 enum Steps {
     DROP_BOX,
     SHARDING_CONF,
+    DOWNLOAD_SHARDS,
 }
 
 export default function SplitSecretPanel(): JSX.Element {
@@ -44,9 +48,25 @@ export default function SplitSecretPanel(): JSX.Element {
     const [containerOffsetTop, setContainerOffsetTop] = React.useState<number>(0);
 
     const [activeStep, setActiveStep] = React.useState<Steps>(Steps.DROP_BOX);
+    const {splitSecret: {file}, setSplitSecret} = useSharderContext();
 
+    // DropZone Functions
+    const onSend = (files: File[]) => {
+        if (files.length >= 1) {
+            setSplitSecret(prevState => ({...prevState, file: files[0]}));
+        }
+    };
+
+    const onClear = () => {
+        setSplitSecret(prevState => ({...prevState, file: undefined}));
+    };
+
+    // Component functions
     const handleNext = () => {
         setActiveStep((prevActiveStep) => prevActiveStep + 1);
+        if (activeStep === steps.length - 2) {
+            // TODO: Process WASM with file, threshold, shardNumber (Context)
+        }
     };
 
     const handleBack = () => {
@@ -55,18 +75,28 @@ export default function SplitSecretPanel(): JSX.Element {
 
     const handleReset = () => {
         setActiveStep(0);
+        onClear();
+        setSplitSecret(prevState => ({...prevState, threshold: 2}));
+        setSplitSecret(prevState => ({...prevState, shardNumber: 2}));
+
+    };
+
+
+
+    const isDisabledNextOnDrop = () :boolean => {
+        return file === undefined;
     };
 
     const stepMapWeb: Record<Steps, JSX.Element> = {
-        [Steps.DROP_BOX]: <DropBox inputID={"web"} />,
-        // TODO: add config panel
+        [Steps.DROP_BOX]: <DropBox inputID={"web"} onSend={onSend} onClear={onClear} />,
         [Steps.SHARDING_CONF]:<StepShardingConfiguration />,
+        [Steps.DOWNLOAD_SHARDS]: <StepShardsDownload />
     };
 
     const stepMapMobile: Record<Steps, JSX.Element> = {
-        [Steps.DROP_BOX]: <DropBox inputID={"mobile"}/>,
-        // TODO: add config panel
+        [Steps.DROP_BOX]: <DropBox inputID={"mobile"} onSend={onSend} onClear={onClear} />,
         [Steps.SHARDING_CONF]: <StepShardingConfiguration />,
+        [Steps.DOWNLOAD_SHARDS]: <StepShardsDownload />
     };
 
     React.useEffect(() => {
@@ -137,7 +167,7 @@ export default function SplitSecretPanel(): JSX.Element {
                                         >
                                                 Back
                                         </Button>
-                                        <Button onClick={handleNext}>
+                                        <Button onClick={handleNext} disabled={isDisabledNextOnDrop()} >
                                             {activeStep === steps.length - 2 ? "Finish" : "Next"}
                                         </Button>
                                     </>
@@ -182,7 +212,7 @@ export default function SplitSecretPanel(): JSX.Element {
                                                         </div>
                                                     ) : (
                                                         <>
-                                                            <Button variant={"contained"} onClick={handleNext}>
+                                                            <Button variant={"contained"} onClick={handleNext} disabled={isDisabledNextOnDrop()}>
                                                                 {activeStep === steps.length - 2 ? "Finish" : "Next"}
                                                             </Button>
                                                             <Button
