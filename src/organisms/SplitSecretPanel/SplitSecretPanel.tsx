@@ -13,10 +13,9 @@ import {
     Stepper,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
+
 import useCurrentWidth from "../../hooks/useCurrentWidth";
-import StepSecretDrop from "./StepSecretDrop";
-import StepShardingConfiguration from "./StepShardingConfiguration";
-import StepShardsDownload from "./StepShardsDownload";
+import DropBox from "../../molecules/DropBox";
 
 const ColoredConnector = styled(StepConnector)(({ theme }) => ({
     [`&.${stepConnectorClasses.active}`]: {
@@ -31,13 +30,20 @@ const ColoredConnector = styled(StepConnector)(({ theme }) => ({
     },
 }));
 
+
+enum Steps {
+    DROP_BOX,
+    // TODO: Add config panel
+    STEP_ONE,
+}
+
 export default function SplitSecretPanel(): JSX.Element {
     const [loaded, setLoaded] = React.useState<boolean>(false);
     const currentWidth = useCurrentWidth();
     const containerRef = React.useRef<HTMLDivElement>(null);
     const [containerOffsetTop, setContainerOffsetTop] = React.useState<number>(0);
 
-    const [activeStep, setActiveStep] = React.useState(0);
+    const [activeStep, setActiveStep] = React.useState<Steps>(Steps.DROP_BOX);
 
     const handleNext = () => {
         setActiveStep((prevActiveStep) => prevActiveStep + 1);
@@ -51,6 +57,18 @@ export default function SplitSecretPanel(): JSX.Element {
         setActiveStep(0);
     };
 
+    const stepMapWeb: Record<Steps, JSX.Element> = {
+        [Steps.DROP_BOX]: <DropBox inputID={"web"} />,
+        // TODO: add config panel
+        [Steps.STEP_ONE]: <div>step2</div>,
+    };
+
+    const stepMapMobile: Record<Steps, JSX.Element> = {
+        [Steps.DROP_BOX]: <DropBox inputID={"mobile"}/>,
+        // TODO: add config panel
+        [Steps.STEP_ONE]: <div>step2</div>,
+    };
+
     React.useEffect(() => {
         if (containerRef && containerRef.current) {
             setContainerOffsetTop(containerRef.current.offsetTop + 24);
@@ -59,11 +77,6 @@ export default function SplitSecretPanel(): JSX.Element {
     }, [containerRef, currentWidth]);
 
     const [steps,] = React.useState<string[]>(["Drop your secret", "Configure sharding", "Download your shards"]);
-    const [panels,] = React.useState<JSX.Element[]>([
-        StepSecretDrop(),
-        StepShardingConfiguration(),
-        StepShardsDownload(),
-    ]);
 
     return (
         <>
@@ -103,8 +116,11 @@ export default function SplitSecretPanel(): JSX.Element {
                     >
                         {loaded &&
                         <Paper sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+                            {/* Specific step component */}
                             <div style={{ display: "flex", flex: 1, overflow: "scroll" }}>
-                                {panels[activeStep]}
+                                <div style={{display: "flex", flex: 1}}>
+                                    {stepMapWeb[activeStep]}
+                                </div>
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between", margin: "12px" }}>
                                 {activeStep === steps.length - 1 ? (
@@ -132,6 +148,7 @@ export default function SplitSecretPanel(): JSX.Element {
                     </div>
                 </Fade>
             </Stack>
+            {/*  Mobile view  */}
             <Box sx={{ display: { xs: "flex", sm: "none" }, width: "100%" }}>
                 <Fade in={true} style={{ transitionDelay: "200ms" }}>
                     <Box sx={{ marginTop: "12px", width: "100%" }}>
@@ -148,11 +165,14 @@ export default function SplitSecretPanel(): JSX.Element {
                                     <StepContent>
                                         <Box>
                                             <Stack spacing={"12px"}>
-                                                <Fade in={true} style={{ transitionDelay: "200ms" }}>
-                                                    <Paper sx={{ padding: "12px" }}>
-                                                        {panels[activeStep]}
-                                                    </Paper>
-                                                </Fade>
+                                                <Paper sx={{ padding: "12px" }}>
+                                                    {/* Specific step component */}
+                                                    <div style={{ display: "flex", flex: 1, overflow: "scroll" }}>
+                                                        <div style={{display: "flex", flex: 1}}>
+                                                            {stepMapMobile[activeStep]}
+                                                        </div>
+                                                    </div>
+                                                </Paper>
                                                 <Stack direction={"row"} display={"flex"} justifyContent={"space-between"}>
                                                     {activeStep === steps.length - 1 ? (
                                                         <div style={{display: "flex", width: "100%"}}>

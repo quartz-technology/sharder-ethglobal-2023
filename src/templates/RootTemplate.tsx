@@ -37,6 +37,7 @@ export default function RootTemplate(): JSX.Element {
                         <Tab label="Combine shards" />
                     </Tabs>
                 </Box>
+                {/* TODO: Context for panels */}
                 {panels.map((panel, id) => {
                     return <TabPanel key={id} index={id} value={selectedPanelID} child={panel} />;
                 })}
