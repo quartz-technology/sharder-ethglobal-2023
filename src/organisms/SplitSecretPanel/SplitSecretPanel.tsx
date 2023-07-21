@@ -16,6 +16,7 @@ import { styled } from "@mui/material/styles";
 
 import useCurrentWidth from "../../hooks/useCurrentWidth";
 import DropBox from "../../molecules/DropBox";
+import StepShardingConfiguration from "./StepShardingConfiguration";
 
 const ColoredConnector = styled(StepConnector)(({ theme }) => ({
     [`&.${stepConnectorClasses.active}`]: {
@@ -33,8 +34,7 @@ const ColoredConnector = styled(StepConnector)(({ theme }) => ({
 
 enum Steps {
     DROP_BOX,
-    // TODO: Add config panel
-    STEP_ONE,
+    SHARDING_CONF,
 }
 
 export default function SplitSecretPanel(): JSX.Element {
@@ -60,13 +60,13 @@ export default function SplitSecretPanel(): JSX.Element {
     const stepMapWeb: Record<Steps, JSX.Element> = {
         [Steps.DROP_BOX]: <DropBox inputID={"web"} />,
         // TODO: add config panel
-        [Steps.STEP_ONE]: <div>step2</div>,
+        [Steps.SHARDING_CONF]:<StepShardingConfiguration />,
     };
 
     const stepMapMobile: Record<Steps, JSX.Element> = {
         [Steps.DROP_BOX]: <DropBox inputID={"mobile"}/>,
         // TODO: add config panel
-        [Steps.STEP_ONE]: <div>step2</div>,
+        [Steps.SHARDING_CONF]: <StepShardingConfiguration />,
     };
 
     React.useEffect(() => {
