@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, {useState} from "react";
 import {Button, Stack, Typography, Box} from "@mui/material";
 import {useSharderContext} from "../../hooks/context/SharderContext";
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from "@mui/material";
@@ -13,22 +13,8 @@ const columns: GridColDef[] = [
 ];
 
 export default function StepShardsDownload(): JSX.Element {
-    const {splitSecret: {file, threshold, shardNumber, fileList}, setSplitSecret} = useSharderContext();
+    const {splitSecret: {file, threshold, shardNumber, fileList}} = useSharderContext();
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-
-    // TODO: Remove this useEffect just here for create fake FileList
-    useEffect(() => {
-        // This function creates a new Blob (binary large object) as a File.
-        const createFile = (name: string) => new File(["content"], name, { type: "text/plain" });
-
-        const files = Array.from({ length: shardNumber }, (_, i) => createFile(`file${i + 1}.txt`));
-
-        // Update the SharderContext state
-        setSplitSecret((prevState) => ({
-            ...prevState,
-            fileList: files
-        }));
-    }, [setSplitSecret]);
 
     const rows =  fileList.map((file, index) => ({
         id: index + 1,

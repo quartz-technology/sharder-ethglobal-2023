@@ -19,6 +19,7 @@ import DropBox from "../../molecules/DropBox";
 import StepShardingConfiguration from "./StepShardingConfiguration";
 import {useSharderContext} from "../../hooks/context/SharderContext";
 import StepShardsDownload from "./StepShardsDownload";
+import {splitFileIntoShards} from "../../utils/splitFileIntoShards";
 
 
 const ColoredConnector = styled(StepConnector)(({ theme }) => ({
@@ -48,7 +49,7 @@ export default function SplitSecretPanel(): JSX.Element {
     const [containerOffsetTop, setContainerOffsetTop] = React.useState<number>(0);
 
     const [activeStep, setActiveStep] = React.useState<Steps>(Steps.DROP_BOX);
-    const {splitSecret: {file}, setSplitSecret} = useSharderContext();
+    const {splitSecret: {file, threshold, shardNumber}, setSplitSecret} = useSharderContext();
 
     // DropZone Functions
     const onSend = (files: File[]) => {
@@ -64,8 +65,18 @@ export default function SplitSecretPanel(): JSX.Element {
     // Component functions
     const handleNext = () => {
         setActiveStep((prevActiveStep) => prevActiveStep + 1);
+        // Finish button action
         if (activeStep === steps.length - 2) {
-            // TODO: Process WASM with file, threshold, shardNumber (Context)
+            if (file && threshold && shardNumber) {
+                splitFileIntoShards(file, shardNumber, threshold)
+                    .then((shardFiles) => {
+                        setSplitSecret(prevState => ({...prevState, fileList: shardFiles}));
+                        console.log(shardFiles);
+                    })
+                    .catch((error) => {
+                        console.error("Error while splitting file into shards: ", error);
+                    });
+            }
         }
     };
 
@@ -80,8 +91,6 @@ export default function SplitSecretPanel(): JSX.Element {
         setSplitSecret(prevState => ({...prevState, shardNumber: 2}));
 
     };
-
-
 
     const isDisabledNextOnDrop = () :boolean => {
         return file === undefined;

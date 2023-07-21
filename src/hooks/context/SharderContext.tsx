@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 
-interface SplitSecretState {
+export interface SplitSecretState {
     file?: File;
     shardNumber: number;
     threshold: number;
     fileList: File[];
 }
 
-interface CombineShardsState {
+export interface CombineShardsState {
     fileList: File[];
     file?: File;
 }

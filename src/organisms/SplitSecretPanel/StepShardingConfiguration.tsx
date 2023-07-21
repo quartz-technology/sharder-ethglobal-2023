@@ -2,17 +2,17 @@ import React from "react";
 import {Box, Stack, Tooltip, Typography} from "@mui/material";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import SliderWithInput from "../../molecules/SliderWithInput";
-import {useSharderContext} from "../../hooks/context/SharderContext";
+import {SplitSecretState, useSharderContext} from "../../hooks/context/SharderContext";
 
 export default function StepShardingConfiguration(): JSX.Element {
     const {splitSecret: {shardNumber, threshold}, setSplitSecret} = useSharderContext();
 
     const setShardNumber = (value: number) => {
-        setSplitSecret(prevState => ({ ...prevState, shardNumber: value }));
+        setSplitSecret((prevState: SplitSecretState) => ({ ...prevState, shardNumber: value }));
     };
 
     const setThreshold = (value: number) => {
-        setSplitSecret(prevState => ({ ...prevState, threshold: value }));
+        setSplitSecret((prevState: SplitSecretState) => ({ ...prevState, threshold: value }));
     };
 
 
