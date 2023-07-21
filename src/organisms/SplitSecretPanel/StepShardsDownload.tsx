@@ -1,20 +1,42 @@
-import React, {useState} from "react";
-import {Button, Stack, Typography, Box} from "@mui/material";
+import React, { useState } from "react";
+import {Button, Stack, Typography, Box, TextField} from "@mui/material";
 import {useSharderContext} from "../../hooks/context/SharderContext";
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from "@mui/material";
 import DownloadIcon from "@mui/icons-material/Download";
+import ShareIcon from "@mui/icons-material/Share";
 import {DataGrid, GridColDef, GridPagination, GridRowSelectionModel} from "@mui/x-data-grid";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 
-const columns: GridColDef[] = [
-    { field: "id", headerName: "ID", flex: 1 },
-    { field: "fileName", headerName: "File Name", flex: 4},
-];
-
 export default function StepShardsDownload(): JSX.Element {
     const {splitSecret: {file, threshold, shardNumber, fileList}} = useSharderContext();
-    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [selectedFiles, setSelectedFiles] = useState<{file: File, ethAddress: string}[]>([]);
+    const [ethAddresses, setEthAddresses] = useState<string[]>(new Array(fileList.length).fill(""));
+
+
+    const handleETHAddressChange = (index: number, newValue: string) => {
+        const newAddresses = [...ethAddresses];
+        newAddresses[index] = newValue;
+        setEthAddresses(newAddresses);
+    };
+
+    const columns: GridColDef[] = [
+        { field: "id", headerName: "ID", flex: 1 },
+        { field: "fileName", headerName: "File Name", flex: 2},
+        {
+            field: "ethAddress",
+            headerName: "ETH Address",
+            flex: 2,
+            renderCell: (params) => (
+                <TextField
+                    variant="outlined"
+                    size="small"
+                    value={ethAddresses[params.row.id - 1] || ""}
+                    onChange={(event) => handleETHAddressChange(params.row.id - 1, event.target.value)}
+                />
+            ),
+        },
+    ];
 
     const rows =  fileList.map((file, index) => ({
         id: index + 1,
@@ -22,21 +44,38 @@ export default function StepShardsDownload(): JSX.Element {
         file: file
     }));
 
-    const handleSelectionChange = (newSelection:  GridRowSelectionModel) => {
-        const newSelectedFiles = newSelection.map((item) => fileList[item as number - 1]);
+    const handleSelectionChange = (newSelection: GridRowSelectionModel) => {
+        const newSelectedFiles = newSelection.map((id) => {
+            const fileIndex = id as number - 1;
+
+            return {
+                file: fileList[fileIndex],
+                ethAddress: ethAddresses[fileIndex] || "",
+            };
+        });
         setSelectedFiles(newSelectedFiles);
     };
 
     const handleDownloadClick = async () => {
         const zip = new JSZip();
 
-        selectedFiles.forEach((file) => {
+        selectedFiles.forEach(({file, ethAddress}) => {
             zip.file(file.name, file);
         });
 
         const zipContent = await zip.generateAsync({ type: "blob" });
-
         saveAs(zipContent, "sharder.zip");
+
+    };
+
+    const handleShareClick = async () => {
+
+        selectedFiles.forEach(({file, ethAddress}) => {
+            // TODO: Implement logic of send shared
+            console.log(ethAddress);
+        });
+
+
     };
 
     const CustomFooter = () => (
@@ -48,6 +87,9 @@ export default function StepShardsDownload(): JSX.Element {
                         <Typography sx={{margin: "12px", display: "flex"}} variant="body2">{`${selectedFiles.length} row selected`}</Typography>
                         <Button onClick={handleDownloadClick} startIcon={<DownloadIcon />}>
                             Download
+                        </Button>
+                        <Button onClick={handleShareClick} startIcon={<ShareIcon />}>
+                            Share
                         </Button>
                     </>
                     }
@@ -61,9 +103,14 @@ export default function StepShardsDownload(): JSX.Element {
             <Box sx={{ display: { xs: "flex", sm: "none" }, flex: 1}}>
                 <Stack direction={"column"}  flex={1} >
                     {selectedFiles.length > 0 &&
-                    <Button onClick={handleDownloadClick} startIcon={<DownloadIcon />}>
-                        {`${selectedFiles.length} row selected`}
-                    </Button>
+                        <>
+                            <Button onClick={handleDownloadClick} startIcon={<DownloadIcon />}>
+                                {`Download ${selectedFiles.length} shards`}
+                            </Button>
+                            <Button onClick={handleShareClick} startIcon={<ShareIcon />}>
+                                {`Share ${selectedFiles.length} shards`}
+                            </Button>
+                        </>
                     }
                     <div style={{ flex: 1, display: "flex" }}>
                         <GridPagination />
