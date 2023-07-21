@@ -1,6 +1,6 @@
 import React from "react";
 import {Box, Stack, Tab, Tabs} from "@mui/material";
-import SplitSecretPanel from "../organisms/SplitSecretPanel";
+import SplitSecretPanel from "../organisms/SplitSecretPanel/SplitSecretPanel";
 import CombineShardsPanel from "../organisms/CombineShardsPanel";
 import TabPanel from "../organisms/TabPanel";
 
