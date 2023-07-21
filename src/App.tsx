@@ -1,6 +1,7 @@
 import React from "react";
+import {createTheme, CssBaseline, responsiveFontSizes, Stack, ThemeProvider} from "@mui/material";
 import TopAppBar from "./organisms/TopAppBar";
-import {createTheme, CssBaseline, responsiveFontSizes, ThemeProvider} from "@mui/material";
+import RootPage from "./pages/RootPage";
 
 let theme = createTheme({
     palette: {
@@ -16,9 +17,12 @@ function App() {
             <CssBaseline />
             <div
                 id={"app-container"}
-                style={{ display: "flex", position: "absolute", top: 0, left: 0, height: "100%", width: "100%", margin: 0 }}
+                style={{ display: "flex", position: "absolute", top: 0, left: 0, height: "100vh", width: "100vw", margin: 0 }}
             >
-                <TopAppBar />
+                <Stack>
+                    <TopAppBar />
+                    <RootPage />
+                </Stack>
             </div>
         </ThemeProvider>
     );
