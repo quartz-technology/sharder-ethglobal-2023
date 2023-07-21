@@ -1,5 +1,6 @@
 import React from "react";
 import {
+    Box,
     Button,
     Fade,
     Paper,
@@ -7,14 +8,13 @@ import {
     Step,
     StepConnector,
     stepConnectorClasses,
+    StepContent,
     StepLabel,
     Stepper,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import useCurrentWidth from "../hooks/useCurrentWidth";
-
-const steps = ["Drop your secret", "Configure sharding", "Download your shards"];
 
 const ColoredConnector = styled(StepConnector)(({ theme }) => ({
     [`&.${stepConnectorClasses.active}`]: {
@@ -28,6 +28,7 @@ const ColoredConnector = styled(StepConnector)(({ theme }) => ({
         },
     },
 }));
+
 export default function SplitSecretPanel(): JSX.Element {
     const [loaded, setLoaded] = React.useState<boolean>(false);
     const currentWidth = useCurrentWidth();
@@ -55,45 +56,49 @@ export default function SplitSecretPanel(): JSX.Element {
         }
     }, [containerRef, currentWidth]);
 
+    const [steps,] = React.useState<string[]>(["Drop your secret", "Configure sharding", "Download your shards"]);
 
     return (
-        <Stack width={"100%"} spacing={"12px"}>
-            <Stepper
-                sx={{
-                    marginTop: "24px",
-                }}
-                activeStep={activeStep}
-                alternativeLabel={true}
-                connector={<ColoredConnector />}
-            >
+        <>
+            <Stack sx={{ display: { xs: "none", sm: "inherit" } }} width={"100%"} spacing={"12px"}>
+                <Stepper
+                    sx={{
+                        marginTop: "24px",
+                    }}
+                    activeStep={activeStep}
+                    alternativeLabel={true}
+                    connector={<ColoredConnector />}
+                >
 
-                {steps.map((label, index) => {
-                    const stepProps: { completed?: boolean } = {};
-                    const labelProps: {
+                    {steps.map((label, index) => {
+                        const stepProps: { completed?: boolean } = {};
+                        const labelProps: {
                         optional?: React.ReactNode;
                     } = {};
-                    return (
-                        <Step key={index} {...stepProps}>
-                            <StepLabel {...labelProps}>{label}</StepLabel>
-                        </Step>
-                    );
-                })}
+                        return (
+                            <Step key={index} {...stepProps}>
+                                <StepLabel {...labelProps}>{label}</StepLabel>
+                            </Step>
+                        );
+                    })}
 
-            </Stepper>
+                </Stepper>
 
-            <Fade in={true} style={{ transitionDelay: "200ms" }}>
-                <div
-                    ref={containerRef}
-                    style={{
-                        marginTop: "24px",
-                        width: "100%",
-                        height: `calc(100vh - ${containerOffsetTop}px)`,
-                        overflow: "scroll"
-                    }}
-                >
-                    {loaded &&
+                <Fade in={true} style={{ transitionDelay: "200ms" }}>
+                    <div
+                        ref={containerRef}
+                        style={{
+                            marginTop: "24px",
+                            width: "100%",
+                            height: `calc(100vh - ${containerOffsetTop}px)`,
+                            overflow: "scroll"
+                        }}
+                    >
+                        {loaded &&
                         <Paper sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-                            <div style={{ display: "flex", flex: 1, overflow: "scroll" }} />
+                            <div style={{ display: "flex", flex: 1, overflow: "scroll" }}>
+                                {/*  TODO: Add dynamic tables  */}
+                            </div>
                             <div style={{ display: "flex", justifyContent: "space-between", margin: "12px" }}>
                                 {activeStep === steps.length - 1 ? (
                                     <div style={{display: "flex", width: "100%", justifyContent: "flex-end"}}>
@@ -116,9 +121,61 @@ export default function SplitSecretPanel(): JSX.Element {
                                 )}
                             </div>
                         </Paper>
-                    }
-                </div>
-            </Fade>
-        </Stack>
+                        }
+                    </div>
+                </Fade>
+            </Stack>
+            <Box sx={{ display: { xs: "flex", sm: "none" }, width: "100%" }}>
+                <Fade in={true} style={{ transitionDelay: "200ms" }}>
+                    <Box sx={{ marginTop: "12px", width: "100%" }}>
+                        <Stepper
+                            activeStep={activeStep}
+                            orientation="vertical"
+                            connector={<ColoredConnector />}
+                        >
+                            {steps.map((step, index) => (
+                                <Step key={index}>
+                                    <StepLabel>
+                                        {step}
+                                    </StepLabel>
+                                    <StepContent>
+                                        <Box>
+                                            <Stack spacing={"12px"}>
+                                                <Paper sx={{ padding: "12px" }}>
+                                                    {/*  TODO: Add dynamic tables  */}
+                                                </Paper>
+                                                <Stack direction={"row"} display={"flex"} justifyContent={"space-between"}>
+                                                    {activeStep === steps.length - 1 ? (
+                                                        <div style={{display: "flex", width: "100%"}}>
+                                                            <Button variant={"contained"} onClick={handleReset}>
+                                                                Reset
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <Button variant={"contained"} onClick={handleNext}>
+                                                                {activeStep === steps.length - 2 ? "Finish" : "Next"}
+                                                            </Button>
+                                                            <Button
+                                                                color="inherit"
+                                                                disabled={activeStep === 0}
+                                                                onClick={handleBack}
+                                                                sx={{ mr: 1 }}
+                                                            >
+                                                                Back
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                </Stack>
+                                            </Stack>
+                                        </Box>
+                                    </StepContent>
+                                </Step>
+                            ))}
+                        </Stepper>
+                    </Box>
+                </Fade>
+            </Box>
+        </>
     );
 }
