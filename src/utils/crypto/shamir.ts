@@ -108,7 +108,7 @@ export function Split(secret: Buffer, parts: number, threshold: number): Buffer[
     if (threshold > 255) {
         throw new Error("threshold cannot exceed 255");
     }
-    if (secret.length == 0) {
+    if (secret.length === 0) {
         throw new Error("cannot split an empty secret");
     }
 
@@ -145,7 +145,7 @@ export function Combine(parts: Buffer[]): Buffer {
         throw new Error("parts must be at least two bytes");
     }
     for (let i = 1; i < parts.length; i++) {
-        if (parts[i].length != firstPartLen) {
+        if (parts[i].length !== firstPartLen) {
             throw new Error("all parts must be the same length");
         }
     }
