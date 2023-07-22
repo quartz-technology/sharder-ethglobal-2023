@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
-import {JsonRpcProvider} from "ethers";
+import {BrowserProvider} from "ethers";
 
 export interface SplitSecretState {
     file?: File;
@@ -18,8 +18,8 @@ interface AppState {
     setSplitSecret: React.Dispatch<React.SetStateAction<SplitSecretState>>;
     combineShards: CombineShardsState;
     setCombineShards: React.Dispatch<React.SetStateAction<CombineShardsState>>;
-    provider: JsonRpcProvider | null;
-    setProvider: React.Dispatch<React.SetStateAction<JsonRpcProvider | null>>;
+    provider: BrowserProvider | null;
+    setProvider: React.Dispatch<React.SetStateAction<BrowserProvider | null>>;
 
 }
 
@@ -40,7 +40,7 @@ export const SharderContext = createContext<AppState>(initialState);
 export const SharderContextProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [splitSecret, setSplitSecret] = useState<SplitSecretState>({shardNumber: 2, threshold: 2, fileList: []});
     const [combineShards, setCombineShards] = useState<CombineShardsState>({fileList: []});
-    const [provider, setProvider] = useState<JsonRpcProvider | null>(null);
+    const [provider, setProvider] = useState<BrowserProvider | null>(null);
 
     return (
         <SharderContext.Provider value={{ splitSecret, setSplitSecret, combineShards, setCombineShards, provider, setProvider }}>

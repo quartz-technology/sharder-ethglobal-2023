@@ -11,6 +11,35 @@ import {useLazyQuery} from "@airstack/airstack-react";
 import {AirstackResolvedXMTP, USER_HAS_XMTP_RESOLVER} from "../../graphql/resolve";
 import {toast, ToastContainer} from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
+import {MetaMaskSDK} from "@metamask/sdk";
+import {ethers} from "ethers";
+import {Client} from "@xmtp/xmtp-js";
+import {
+    Attachment,
+    AttachmentCodec,
+    RemoteAttachmentCodec,
+} from "@xmtp/content-type-remote-attachment";
+import {Filelike, Web3Storage} from "web3.storage";
+
+export class Upload implements Filelike {
+    name: string;
+    data: Uint8Array;
+
+    constructor(name: string, data: Uint8Array) {
+        this.name = name;
+        this.data = data;
+    }
+
+    stream(): ReadableStream {
+        const self = this;
+        return new ReadableStream({
+            start(controller) {
+                controller.enqueue(Buffer.from(self.data));
+                controller.close();
+            },
+        });
+    }
+}
 
 export default function StepShardsDownload(): JSX.Element {
     const {splitSecret: {file, threshold, shardNumber, fileList}} = useSharderContext();
@@ -87,6 +116,25 @@ export default function StepShardsDownload(): JSX.Element {
     );
 
     const handleShareClick = async () => {
+        const MMSDK = new MetaMaskSDK({
+            injectProvider: true,
+            dappMetadata: {
+                name: "Sharder",
+                url: process.env.REACT_APP_WALLET_CONNECT_DOMAIN,
+            }
+        });
+
+        // await MMSDK.init()
+        if (window.ethereum) {
+            await window.ethereum.request({ method: 'eth_requestAccounts' })
+        }
+        const provider = new ethers.BrowserProvider(MMSDK.getProvider());
+
+        const signer = await provider.getSigner();
+        const xmtp = await Client.create(signer, { env: "production" });
+        xmtp.registerCodec(new AttachmentCodec());
+        xmtp.registerCodec(new RemoteAttachmentCodec());
+
         for (const {file, ethAddress} of selectedFiles) {
             const {data} = await resolveXMTP({
                 address: ethAddress,
@@ -108,6 +156,113 @@ export default function StepShardsDownload(): JSX.Element {
                 return;
             }
         }
+
+        const filesPerTarget = new Map<string, File[]>();
+        for (const {file, ethAddress} of selectedFiles) {
+            const fileForTarget = filesPerTarget.get(ethAddress);
+
+            if (fileForTarget) {
+                fileForTarget.push(file);
+                filesPerTarget.set(ethAddress, fileForTarget);
+            } else {
+                filesPerTarget.set(ethAddress, [file]);
+            }
+        }
+
+        filesPerTarget.forEach((files, target) => {
+            (async () => {
+                const conversation = await xmtp.conversations.newConversation(target);
+
+                for (const file of files) {
+                    const attachment: Attachment = {
+                        filename: file.name,
+                        mimeType: file.type,
+                        data: new Uint8Array(await file.arrayBuffer()),
+                    };
+
+                    toast.warn(`Shard [${file.name}] is in transit!`, {
+                        position: "top-right",
+                        autoClose: 2000,
+                        hideProgressBar: false,
+                        closeOnClick: true,
+                        pauseOnHover: true,
+                        draggable: true,
+                        progress: undefined,
+                        theme: "dark",
+                    });
+                    const upload = new Upload(attachment.filename, attachment.data);
+                    const web3Storage = new Web3Storage({
+                        token: process.env.REACT_APP_WEB3_STORAGE_API_KEY as string,
+                    });
+                    const cid = await web3Storage.put([upload]);
+                    const url = `https://${cid}.ipfs.w3s.link/${attachment.filename}`;
+
+                    conversation.send(url).then(() => {
+                        toast.success(`Shard [${file.name}] has been sent using XMTP!`, {
+                            position: "top-right",
+                            autoClose: 2000,
+                            hideProgressBar: false,
+                            closeOnClick: true,
+                            pauseOnHover: true,
+                            draggable: true,
+                            progress: undefined,
+                            theme: "dark",
+                        });
+                    });
+                }
+            })()
+        });
+
+        /*
+        for (const {file, ethAddress} of selectedFiles) {
+            const attachment: Attachment = {
+                filename: file.name,
+                mimeType: file.type,
+                data: new Uint8Array(await file.arrayBuffer()),
+            };
+
+            const upload = new Upload(attachment.filename, attachment.data);
+            const web3Storage = new Web3Storage({
+                token: process.env.REACT_APP_WEB3_STORAGE_API_KEY as string,
+            });
+            const cid = await web3Storage.put([upload]);
+            const url = `https://${cid}.ipfs.w3s.link/${attachment.filename}`;
+
+            console.log(url);
+
+            const conversation = await xmtp.conversations.newConversation(ethAddress);
+            await conversation.send(url);
+            const upload = new Upload(encryptedEncoded.digest, encryptedEncoded.payload);
+
+            const web3Storage = new Web3Storage({
+                token: process.env.REACT_APP_WEB3_STORAGE_API_KEY as string,
+            });
+
+            const cid = await web3Storage.put([upload]);
+            const url = `https://${cid}.ipfs.w3s.link/${encryptedEncoded.digest}`;
+
+            console.log(url)
+
+            const remoteAttachment: RemoteAttachment = {
+                url: url,
+                contentDigest: encryptedEncoded.digest,
+                salt: encryptedEncoded.salt,
+                nonce: encryptedEncoded.nonce,
+                secret: encryptedEncoded.secret,
+                scheme: "https://",
+                filename: attachment.filename,
+                contentLength: attachment.data.byteLength,
+            };
+
+            const conversation = await xmtp.conversations.newConversation(ethAddress);
+            await conversation.send(remoteAttachment, {
+                contentType: ContentTypeRemoteAttachment,
+                contentFallback: url,
+            })
+
+            console.log(remoteAttachment)
+        }
+        */
     };
 
     const CustomFooter = () => (

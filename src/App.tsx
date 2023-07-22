@@ -1,8 +1,8 @@
+import "./polyfills"
 import React from "react";
 import {createTheme, CssBaseline, responsiveFontSizes, Stack, ThemeProvider} from "@mui/material";
 import TopAppBar from "./organisms/TopAppBar";
 import RootPage from "./pages/RootPage";
-import { WalletConnectModalAuth } from "@walletconnect/modal-auth-react";
 import {init} from "@airstack/airstack-react";
 
 init(process.env.REACT_APP_AIRSTACK_API_KEY!);
@@ -28,15 +28,6 @@ function App() {
                     <RootPage />
                 </Stack>
             </div>
-            <WalletConnectModalAuth
-                projectId={process.env.REACT_APP_WALLET_CONNECT_PROJECT_ID!}
-                metadata={{
-                    name: 'Sharder',
-                    description: '',
-                    url: process.env.REACT_APP_WALLET_CONNECT_DOMAIN!,
-                    icons: []
-                }}
-            />
         </ThemeProvider>
     );
 }
