@@ -3,6 +3,9 @@ import {createTheme, CssBaseline, responsiveFontSizes, Stack, ThemeProvider} fro
 import TopAppBar from "./organisms/TopAppBar";
 import RootPage from "./pages/RootPage";
 import { WalletConnectModalAuth } from "@walletconnect/modal-auth-react";
+import {init} from "@airstack/airstack-react";
+
+init(process.env.REACT_APP_AIRSTACK_API_KEY!);
 
 let theme = createTheme({
     palette: {

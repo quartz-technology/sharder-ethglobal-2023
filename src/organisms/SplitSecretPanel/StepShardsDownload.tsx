@@ -7,17 +7,29 @@ import ShareIcon from "@mui/icons-material/Share";
 import {DataGrid, GridColDef, GridPagination, GridRowSelectionModel} from "@mui/x-data-grid";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
+import {useLazyQuery} from "@airstack/airstack-react";
+import {AirstackResolvedXMTP, USER_HAS_XMTP_RESOLVER} from "../../graphql/resolve";
+import {toast, ToastContainer} from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function StepShardsDownload(): JSX.Element {
     const {splitSecret: {file, threshold, shardNumber, fileList}} = useSharderContext();
     const [selectedFiles, setSelectedFiles] = useState<{file: File, ethAddress: string}[]>([]);
     const [ethAddresses, setEthAddresses] = useState<string[]>(new Array(fileList.length).fill(""));
 
-
     const handleETHAddressChange = (index: number, newValue: string) => {
         const newAddresses = [...ethAddresses];
         newAddresses[index] = newValue;
         setEthAddresses(newAddresses);
+
+        // find the corresponding file in selectedFiles and update its ethAddress
+        const newSelectedFiles = selectedFiles.map((fileInfo, i) => {
+            if (i === index) {
+                return { ...fileInfo, ethAddress: newValue };
+            }
+            return fileInfo;
+        });
+        setSelectedFiles(newSelectedFiles);
     };
 
     const columns: GridColDef[] = [
@@ -68,14 +80,34 @@ export default function StepShardsDownload(): JSX.Element {
 
     };
 
+    const [resolveXMTP, { data, loading }] = useLazyQuery(
+        USER_HAS_XMTP_RESOLVER,
+        {},
+        { cache: true }
+    );
+
     const handleShareClick = async () => {
+        for (const {file, ethAddress} of selectedFiles) {
+            const {data} = await resolveXMTP({
+                address: ethAddress,
+            });
 
-        selectedFiles.forEach(({file, ethAddress}) => {
-            // TODO: Implement logic of send shared
-            console.log(ethAddress);
-        });
+            const res = data as AirstackResolvedXMTP;
+            if (res.XMTPs === null || res.XMTPs.XMTP === null) {
+                toast.error(`Recipient for shard "${file.name}" does not have an XMTP account`, {
+                    position: "bottom-center",
+                    autoClose: 5000,
+                    hideProgressBar: false,
+                    closeOnClick: true,
+                    pauseOnHover: true,
+                    draggable: true,
+                    progress: undefined,
+                    theme: "dark",
+                });
 
-
+                return;
+            }
+        }
     };
 
     const CustomFooter = () => (
@@ -116,8 +148,6 @@ export default function StepShardsDownload(): JSX.Element {
                         <GridPagination />
                     </div>
                 </Stack>
-
-
             </Box>
         </>
     );
@@ -182,6 +212,7 @@ export default function StepShardsDownload(): JSX.Element {
                     </TableContainer>
                 </Box>
             </div>
+            <ToastContainer />
         </div>
     );
 }
