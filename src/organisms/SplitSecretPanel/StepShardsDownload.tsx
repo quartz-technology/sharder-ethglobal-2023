@@ -12,7 +12,7 @@ import {AirstackResolvedXMTP, USER_HAS_XMTP_RESOLVER} from "../../graphql/resolv
 import {toast, ToastContainer} from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import {MetaMaskSDK} from "@metamask/sdk";
-import {ethers, Signer} from "ethers";
+import {ethers, JsonRpcProvider, Signer} from "ethers";
 import {Client} from "@xmtp/xmtp-js";
 import {
     Attachment,
@@ -24,9 +24,13 @@ import {
     EAS,
     SchemaEncoder,
 } from "@ethereum-attestation-service/eas-sdk";
+import {SignerOrProvider} from "@ethereum-attestation-service/eas-sdk/dist/transaction";
+import { BlockTag, TransactionRequest, TransactionResponse, FeeData } from "@ethersproject/abstract-provider";
+import { BigNumber } from "@ethersproject/bignumber";
+import { Deferrable } from "@ethersproject/properties";
 
 export const EASContractAddress = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e"; // Sepolia v0.26
-const gitcoinVCSchema = "0x06693f1bdc0888685607dee3ae016eba8d45ca837dea216dc1e7da4018c399d6";
+const sharderSchema = "0x06693f1bdc0888685607dee3ae016eba8d45ca837dea216dc1e7da4018c399d6";
 
 export class Upload implements Filelike {
     name: string;
@@ -92,6 +96,7 @@ export default function StepShardsDownload(): JSX.Element {
         file: file
     }));
 
+    /*
     const createOnChainAttestation = async () => {
         console.log("Enter EAS function")
 
@@ -115,7 +120,8 @@ export default function StepShardsDownload(): JSX.Element {
         console.log("OK")
 
         const signer = await provider.getSigner();
-        eas.connect(signer as any);
+        // @ts-ignore
+        eas.connect(signer);
         // Initialize SchemaEncoder with the schema string
 
         const schemaEncoder = new SchemaEncoder("uint8 shardNumber, uint8 threshold");
@@ -126,24 +132,19 @@ export default function StepShardsDownload(): JSX.Element {
 
         const tx = await eas.attest({
             data: {
-                recipient: "0x4A13F4394cF05a52128BdA527664429D5376C67f",
-                // Unix timestamp of when attestation expires. (0 for no expiration)
+                recipient: signer.address,
                 expirationTime: 0,
                 revocable: false,
                 data: encodedData,
             },
-            schema: gitcoinVCSchema,
+            schema: sharderSchema,
         });
 
-        tx.wait().then((uid) => {
-            console.info(uid)
-        }).catch((reason) => {
-            console.error(reason)
+        tx.tx.wait().then((receipt) => {
+            console.log(receipt.logs[0].data)
         })
-        //const newAttestationUID = await tx.wait();
-
-        // console.log("TestAtest UID: ", newAttestationUID)
     };
+    */
 
     const handleSelectionChange = (newSelection: GridRowSelectionModel) => {
         const newSelectedFiles = newSelection.map((id) => {
@@ -229,36 +230,53 @@ export default function StepShardsDownload(): JSX.Element {
             }
         }
 
-        filesPerTarget.forEach((files, target) => {
-            (async () => {
-                const conversation = await xmtp.conversations.newConversation(target);
+        const eas = new EAS(EASContractAddress);
+        // @ts-ignore
+        eas.connect(signer);
+        // Initialize SchemaEncoder with the schema string
 
-                for (const file of files) {
-                    const attachment: Attachment = {
-                        filename: file.name,
-                        mimeType: file.type,
-                        data: new Uint8Array(await file.arrayBuffer()),
-                    };
+        const schemaEncoder = new SchemaEncoder("uint8 shardNumber, uint8 threshold");
+        const encodedData = schemaEncoder.encodeData([
+            { name: "shardNumber", value: shardNumber, type: "uint8" },
+            { name: "threshold", value: threshold, type: "uint8" },
+        ]);
 
-                    toast.warn(`Shard [${file.name}] is in transit!`, {
-                        position: "top-right",
-                        autoClose: 2000,
-                        hideProgressBar: false,
-                        closeOnClick: true,
-                        pauseOnHover: true,
-                        draggable: true,
-                        progress: undefined,
-                        theme: "dark",
-                    });
-                    const upload = new Upload(attachment.filename, attachment.data);
-                    const web3Storage = new Web3Storage({
-                        token: process.env.REACT_APP_WEB3_STORAGE_API_KEY as string,
-                    });
-                    const cid = await web3Storage.put([upload]);
-                    const url = `https://${cid}.ipfs.w3s.link/${attachment.filename}`;
+        const tx = await eas.attest({
+            data: {
+                recipient: signer.address,
+                expirationTime: 0,
+                revocable: false,
+                data: encodedData,
+            },
+            schema: sharderSchema,
+        });
 
-                    conversation.send(url).then(() => {
-                        toast.success(`Shard [${file.name}] has been sent using XMTP!`, {
+        tx.tx.wait().then((receipt) => {
+            const uid = receipt.logs[0].data;
+
+            toast.success(`Attestation successfully published on-chain!`, {
+                position: "bottom-center",
+                autoClose: 3000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                progress: undefined,
+                theme: "dark",
+            });
+
+            filesPerTarget.forEach((files, target) => {
+                (async () => {
+                    const conversation = await xmtp.conversations.newConversation(target);
+
+                    for (const file of files) {
+                        const attachment: Attachment = {
+                            filename: file.name,
+                            mimeType: file.type,
+                            data: new Uint8Array(await file.arrayBuffer()),
+                        };
+
+                        toast.warn(`Shard [${file.name}] is in transit!`, {
                             position: "top-right",
                             autoClose: 2000,
                             hideProgressBar: false,
@@ -268,61 +286,29 @@ export default function StepShardsDownload(): JSX.Element {
                             progress: undefined,
                             theme: "dark",
                         });
-                    });
-                }
-            })()
-        });
+                        const upload = new Upload(attachment.filename, attachment.data);
+                        const web3Storage = new Web3Storage({
+                            token: process.env.REACT_APP_WEB3_STORAGE_API_KEY as string,
+                        });
+                        const cid = await web3Storage.put([upload]);
+                        const url = `https://${cid}.ipfs.w3s.link/${attachment.filename}`;
 
-        /*
-        for (const {file, ethAddress} of selectedFiles) {
-            const attachment: Attachment = {
-                filename: file.name,
-                mimeType: file.type,
-                data: new Uint8Array(await file.arrayBuffer()),
-            };
-
-            const upload = new Upload(attachment.filename, attachment.data);
-            const web3Storage = new Web3Storage({
-                token: process.env.REACT_APP_WEB3_STORAGE_API_KEY as string,
+                        conversation.send(`${uid}${url}`).then(() => {
+                            toast.success(`Shard [${file.name}] has been sent using XMTP!`, {
+                                position: "top-right",
+                                autoClose: 2000,
+                                hideProgressBar: false,
+                                closeOnClick: true,
+                                pauseOnHover: true,
+                                draggable: true,
+                                progress: undefined,
+                                theme: "dark",
+                            });
+                        });
+                    }
+                })()
             });
-            const cid = await web3Storage.put([upload]);
-            const url = `https://${cid}.ipfs.w3s.link/${attachment.filename}`;
-
-            console.log(url);
-
-            const conversation = await xmtp.conversations.newConversation(ethAddress);
-            await conversation.send(url);
-            const upload = new Upload(encryptedEncoded.digest, encryptedEncoded.payload);
-
-            const web3Storage = new Web3Storage({
-                token: process.env.REACT_APP_WEB3_STORAGE_API_KEY as string,
-            });
-
-            const cid = await web3Storage.put([upload]);
-            const url = `https://${cid}.ipfs.w3s.link/${encryptedEncoded.digest}`;
-
-            console.log(url)
-
-            const remoteAttachment: RemoteAttachment = {
-                url: url,
-                contentDigest: encryptedEncoded.digest,
-                salt: encryptedEncoded.salt,
-                nonce: encryptedEncoded.nonce,
-                secret: encryptedEncoded.secret,
-                scheme: "https://",
-                filename: attachment.filename,
-                contentLength: attachment.data.byteLength,
-            };
-
-            const conversation = await xmtp.conversations.newConversation(ethAddress);
-            await conversation.send(remoteAttachment, {
-                contentType: ContentTypeRemoteAttachment,
-                contentFallback: url,
-            })
-
-            console.log(remoteAttachment)
-        }
-        */
+        })
     };
 
     const CustomFooter = () => (
@@ -338,8 +324,9 @@ export default function StepShardsDownload(): JSX.Element {
                         <Button onClick={handleShareClick} startIcon={<ShareIcon />}>
                             Share
                         </Button>
+                        {/*
                         <Button onClick={createOnChainAttestation}>Test</Button>
-
+                        */}
                     </>
                     }
                     <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>

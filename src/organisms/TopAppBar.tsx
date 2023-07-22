@@ -88,15 +88,17 @@ export default function TopAppBar(): JSX.Element {
                                     <List style={{ display: "flex", flexDirection: "column", width: "100%" }}>
                                         {
                                             messagesFromConversation.map((message, id) => {
+                                                console.log(message.content)
                                                 return (
-                                                    <div key={id} style={{ flex: 1, width: "100%" }}>
+                                                    <div key={id} style={{ width: "100%" }}>
                                                         {
                                                             message.senderAddress === myAddress ?
                                                                 <></>
                                                                 :
                                                                 (<>
-                                                                    <ListItem>
-                                                                    <Link href={`${message.content}`}>Link to shard</Link>
+                                                                    <ListItem sx={{ margin: "24px", flexDirection: "column" }}>
+                                                                        <Link href={`https://sepolia.easscan.org/attestation/view/${message.content.substring(0, 66)}`}>Link to Attestation</Link>
+                                                                        <Link href={`${message.content.substring(66, message.content.length)}`}>Link to Shard</Link>
                                                                     </ListItem>
                                                                     <Divider />
                                                                 </>)
@@ -127,7 +129,7 @@ export default function TopAppBar(): JSX.Element {
             }
         });
 
-        await MMSDK.init()
+        // await MMSDK.init()
         if (window.ethereum) {
             await window.ethereum.request({ method: 'eth_requestAccounts' })
         }
