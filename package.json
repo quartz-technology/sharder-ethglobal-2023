@@ -5,6 +5,7 @@
   "private": true,
   "dependencies": {
     "@airstack/airstack-react": "^0.4.5",
+    "@ethereum-attestation-service/eas-sdk": "^0.27.0",
     "@emotion/react": "^11.10.8",
     "@emotion/styled": "^11.10.8",
     "@metamask/sdk": "^0.5.6",

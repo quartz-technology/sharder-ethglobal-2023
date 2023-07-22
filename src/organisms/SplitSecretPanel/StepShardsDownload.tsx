@@ -12,7 +12,7 @@ import {AirstackResolvedXMTP, USER_HAS_XMTP_RESOLVER} from "../../graphql/resolv
 import {toast, ToastContainer} from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import {MetaMaskSDK} from "@metamask/sdk";
-import {ethers} from "ethers";
+import {ethers, Signer} from "ethers";
 import {Client} from "@xmtp/xmtp-js";
 import {
     Attachment,
@@ -20,6 +20,13 @@ import {
     RemoteAttachmentCodec,
 } from "@xmtp/content-type-remote-attachment";
 import {Filelike, Web3Storage} from "web3.storage";
+import {
+    EAS,
+    SchemaEncoder,
+} from "@ethereum-attestation-service/eas-sdk";
+
+export const EASContractAddress = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e"; // Sepolia v0.26
+const gitcoinVCSchema = "0x06693f1bdc0888685607dee3ae016eba8d45ca837dea216dc1e7da4018c399d6";
 
 export class Upload implements Filelike {
     name: string;
@@ -84,6 +91,59 @@ export default function StepShardsDownload(): JSX.Element {
         fileName: file.name,
         file: file
     }));
+
+    const createOnChainAttestation = async () => {
+        console.log("Enter EAS function")
+
+        const MMSDK = new MetaMaskSDK({
+            injectProvider: true,
+            dappMetadata: {
+                name: "Sharder",
+                url: process.env.REACT_APP_WALLET_CONNECT_DOMAIN,
+            }
+        });
+
+        await MMSDK.init()
+        if (window.ethereum) {
+            await window.ethereum.request({ method: 'eth_requestAccounts' })
+        }
+
+        const provider = new ethers.BrowserProvider(MMSDK.getProvider());
+
+        const eas = new EAS(EASContractAddress);
+        if (!provider) return;
+        console.log("OK")
+
+        const signer = await provider.getSigner();
+        eas.connect(signer as any);
+        // Initialize SchemaEncoder with the schema string
+
+        const schemaEncoder = new SchemaEncoder("uint8 shardNumber, uint8 threshold");
+        const encodedData = schemaEncoder.encodeData([
+            { name: "shardNumber", value: shardNumber, type: "uint8" },
+            { name: "threshold", value: threshold, type: "uint8" },
+        ]);
+
+        const tx = await eas.attest({
+            data: {
+                recipient: "0x4A13F4394cF05a52128BdA527664429D5376C67f",
+                // Unix timestamp of when attestation expires. (0 for no expiration)
+                expirationTime: 0,
+                revocable: false,
+                data: encodedData,
+            },
+            schema: gitcoinVCSchema,
+        });
+
+        tx.wait().then((uid) => {
+            console.info(uid)
+        }).catch((reason) => {
+            console.error(reason)
+        })
+        //const newAttestationUID = await tx.wait();
+
+        // console.log("TestAtest UID: ", newAttestationUID)
+    };
 
     const handleSelectionChange = (newSelection: GridRowSelectionModel) => {
         const newSelectedFiles = newSelection.map((id) => {
@@ -278,6 +338,8 @@ export default function StepShardsDownload(): JSX.Element {
                         <Button onClick={handleShareClick} startIcon={<ShareIcon />}>
                             Share
                         </Button>
+                        <Button onClick={createOnChainAttestation}>Test</Button>
+
                     </>
                     }
                     <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
